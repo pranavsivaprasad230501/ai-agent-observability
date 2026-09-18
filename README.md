@@ -13,7 +13,9 @@ runnable on localhost with a single command.
 
 *Live capture: traffic ramping up on the charts, clicking "Inject Failure
 Spike," the error-rate and latency alerts firing in real time, and both
-resolving on their own once the system recovers.*
+resolving on their own once the system recovers. A proper `.mp4` version
+of this same recording (for native video upload, e.g. on LinkedIn) is at
+[`docs/demo.mp4`](docs/demo.mp4).*
 
 ![dashboard](docs/dashboard.png)
 
