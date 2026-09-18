@@ -35,10 +35,21 @@ jobs:
         run: curl -sf http://localhost:8000/health
 
       - name: Smoke test - chat endpoint
+        # The mock agent intentionally fails ~8% of requests to give the
+        # observability/alerting demo something real to react to, so retry
+        # a few times rather than treating one unlucky call as a failure.
         run: |
-          curl -sf -X POST http://localhost:8000/agent/chat \
-            -H "Content-Type: application/json" \
-            -d '{"prompt":"ci smoke test"}'
+          for i in $(seq 1 8); do
+            if curl -sf -X POST http://localhost:8000/agent/chat \
+              -H "Content-Type: application/json" \
+              -d '{"prompt":"ci smoke test"}'; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "chat endpoint failed on every retry"
+          docker compose logs agent-api
+          exit 1
 
       - name: Smoke test - metrics endpoint
         run: curl -sf http://localhost:8000/metrics | grep -q agent_requests_total
