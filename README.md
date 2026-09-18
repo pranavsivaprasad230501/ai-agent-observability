@@ -9,6 +9,12 @@ Prometheus metrics, a live animated dashboard, threshold-based alerting, and
 a one-click chaos-injection demo — all orchestrated with Docker Compose and
 runnable on localhost with a single command.
 
+![demo](docs/demo.gif)
+
+*Live capture: traffic ramping up on the charts, clicking "Inject Failure
+Spike," the error-rate and latency alerts firing in real time, and both
+resolving on their own once the system recovers.*
+
 ![dashboard](docs/dashboard.png)
 
 ## Why this project
