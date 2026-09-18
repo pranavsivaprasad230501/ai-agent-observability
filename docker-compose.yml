@@ -1,0 +1,35 @@
+services:
+  agent-api:
+    build: ./agent-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MOCK_MODE=${MOCK_MODE:-true}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - LYZR_API_KEY=${LYZR_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - agent-api
+
+  # On-demand traffic generator - not started by `docker compose up`.
+  # Run it explicitly with `make load` (or `docker compose --profile load run --rm load-generator`)
+  # when you want to populate the dashboard, then it exits on its own.
+  load-generator:
+    build: ./load-generator
+    profiles: ["load"]
+    depends_on:
+      - agent-api
+    environment:
+      - TARGET_URL=http://agent-api:8000/agent/chat
+      - DURATION_SECONDS=60

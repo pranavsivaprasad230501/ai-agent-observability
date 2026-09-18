@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build images
+        run: docker compose build agent-api prometheus
+
+      - name: Start stack
+        run: docker compose up -d agent-api prometheus
+
+      - name: Wait for agent-api to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "agent-api is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "agent-api did not become healthy in time"
+          docker compose logs agent-api
+          exit 1
+
+      - name: Smoke test - health
+        run: curl -sf http://localhost:8000/health
+
+      - name: Smoke test - chat endpoint
+        run: |
+          curl -sf -X POST http://localhost:8000/agent/chat \
+            -H "Content-Type: application/json" \
+            -d '{"prompt":"ci smoke test"}'
+
+      - name: Smoke test - metrics endpoint
+        run: curl -sf http://localhost:8000/metrics | grep -q agent_requests_total
+
+      - name: Smoke test - dashboard renders
+        run: curl -sf http://localhost:8000/dashboard | grep -q "AI Agent Observability"
+
+      - name: Smoke test - Prometheus target is up
+        run: |
+          for i in $(seq 1 15); do
+            health=$(curl -sf http://localhost:9090/api/v1/targets | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['data']['activeTargets'][0]['health'])" 2>/dev/null || echo "")
+            if [ "$health" = "up" ]; then
+              echo "prometheus target healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "prometheus target never became healthy"
+          exit 1
+
+      - name: Tear down
+        if: always()
+        run: docker compose down
